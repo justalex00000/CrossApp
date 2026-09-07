@@ -1,16 +1,47 @@
 ﻿using System.Runtime.InteropServices;
+using System.Text.Json;
 
-Console.WriteLine("CrossApp – практикум з крос-платформного програмування");
-Console.WriteLine("Студент: Курій Олексій, ФеІ-34");
-Console.WriteLine(new string('-', 52));
+var osDescription = RuntimeInformation.OSDescription;
+var osEnvironment = Environment.OSVersion.ToString();
+var architecture = RuntimeInformation.ProcessArchitecture.ToString();
+var dotnetVersion = Environment.Version.ToString();
+var runtime = RuntimeInformation.FrameworkDescription;
+var appDirectory = AppContext.BaseDirectory;
+var currentDirectory = Environment.CurrentDirectory;
+var student = "Курій Олексій - ФеІ-34";
+var subject = "Склад";
 
-Console.WriteLine($"ОС (OSDescription) : {RuntimeInformation.OSDescription}");
-Console.WriteLine($"ОС (Environment) : {Environment.OSVersion}");
-Console.WriteLine($"Архітектура процесу : {RuntimeInformation.ProcessArchitecture}");
-Console.WriteLine($"Версія .NET (CLR) : {Environment.Version}");
-Console.WriteLine($"Runtime : {RuntimeInformation.FrameworkDescription}");
-Console.WriteLine($"Каталог застосунку : {AppContext.BaseDirectory}");
-Console.WriteLine($"Поточний каталог : {Environment.CurrentDirectory}");
-Console.WriteLine(new string('-', 52));
+if (args.Contains("--json"))
+{
+    var info = new
+    {
+        Student = student,
+        OSDescription = osDescription,
+        OSEnvironment = osEnvironment,
+        Architecture = architecture,
+        DotnetVersion = dotnetVersion,
+        Runtime = runtime,
+        AppDirectory = appDirectory,
+        CurrentDirectory = currentDirectory,
+        Subject = subject
+    };
 
-Console.WriteLine("Предметна область: Склад");
+    Console.WriteLine(JsonSerializer.Serialize(info));
+}
+else
+{
+    Console.WriteLine("CrossApp – практикум з крос-платформного програмування");
+    Console.WriteLine($"Студент: {student}");
+    Console.WriteLine(new string('-', 52));
+
+    Console.WriteLine($"ОС (OSDescription)      : {osDescription}");
+    Console.WriteLine($"ОС (Environment)        : {osEnvironment}");
+    Console.WriteLine($"Архітектура процесу     : {architecture}");
+    Console.WriteLine($"Версія .NET (CLR)       : {dotnetVersion}");
+    Console.WriteLine($"Runtime                 : {runtime}");
+    Console.WriteLine($"Каталог застосунку      : {appDirectory}");
+    Console.WriteLine($"Поточний каталог        : {currentDirectory}");
+
+    Console.WriteLine(new string('-', 52));
+    Console.WriteLine($"Предметна область       : {subject}");
+}
