@@ -26,7 +26,12 @@ if (args.Contains("--json"))
         Subject = subject
     };
 
-    Console.WriteLine(JsonSerializer.Serialize(info));
+    var options = new JsonSerializerOptions
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    Console.WriteLine(JsonSerializer.Serialize(info, options));
 }
 else
 {
