@@ -45,15 +45,29 @@ dotnet publish src/Cli -c Release -r win-x64 --self-contained true
 dotnet publish src/Cli -c Release -r win-x64 --self-contained false
 ```
 
+### Single-file
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+### Trimmed
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true -p:PublishTrimmed=true
+```
+
 ## Результати публікації
 
 | RID     | Режим               | Розмір | Чи потрібен встановлений runtime |
 | ------- | ------------------- | -----: | -------------------------------- |
 | win-x64 | Self-contained      |  78 MB | Ні                               |
-| win-x64 | Framework-dependent | 229 KB | Так                              |
+| win-x64 | Framework-dependent | 229 KB | Так(.NET10)                      |
+| win-x64 | Single-file         |  71 MB | Ні                               |
+| win-x64 | Trimmed             |  20 MB | Ні                               |
 
 ## Середовище
 
 * Windows 11 x64
-* Cli — .NET 10.0
-* Core — .NET 8.0; .NET 10.0
+* Cli - .NET 10.0
+* Core - .NET 8.0; .NET 10.0
