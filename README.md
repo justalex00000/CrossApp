@@ -4,18 +4,56 @@
 Предметна область: Склад. Сутності: Product (товар), StockBatch (партія), Warehouse (склад), Movement (переміщення).  
 Призначення: облік залишків товарів по партіях.  
 
+## Структура проєкту
+
+```text
+CrossApp/
+├── src/
+│   ├── Cli/
+│   │   ├── Program.cs
+│   │   └── Cli.csproj
+│   └── Core/
+│       ├── EnvironmentInfo.cs
+│       └── Core.csproj
+├── CrossApp.sln
+└── README.md
+```
+
+## Збірка
+
+```bash
+dotnet build
+```
+
 ## Запуск
 
-dotnet build  
-dotnet run --project src/Cli  
-Для отримання інформації одним JSON-рядком використовується:  
-dotnet run --project src/Cli --json
+```bash
+dotnet run --project src/Cli
+```
+
+## Публікація
+
+### Self-contained
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 --self-contained true
+```
+
+### Framework-dependent
+
+```bash
+dotnet publish src/Cli -c Release -r win-x64 --self-contained false
+```
+
+## Результати публікації
+
+| RID     | Режим               | Розмір | Чи потрібен встановлений runtime |
+| ------- | ------------------- | -----: | -------------------------------- |
+| win-x64 | Self-contained      |  78 MB | Ні                               |
+| win-x64 | Framework-dependent | 229 KB | Так                              |
 
 ## Середовище
 
-.NET SDK 8.0, Windows 11 x64
-
-## Розміри self-contained публікацій
-
-win-x64   | 71 MB |  
-linux-x64 | 71 MB |
+* Windows 11 x64
+* Cli — .NET 10.0
+* Core — .NET 8.0; .NET 10.0
