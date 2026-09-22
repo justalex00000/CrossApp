@@ -57,6 +57,9 @@ dotnet publish src/Cli -c Release -r win-x64 --self-contained true -p:PublishSin
 dotnet publish src/Cli -c Release -r win-x64 --self-contained true -p:PublishTrimmed=true
 ```
 
+- Self-contained - містить .NET Runtime, тому встановлення .NET не потрібне.
+- Framework-dependent - не містить Runtime, тому на системі має бути встановлений сумісний .NET Runtime.
+
 ## Результати публікації
 
 | RID     | Режим               | Розмір | Чи потрібен встановлений runtime |
