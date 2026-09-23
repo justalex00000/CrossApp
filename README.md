@@ -62,12 +62,16 @@ dotnet publish src/Cli -c Release -r win-x64 --self-contained true -p:PublishTri
 
 ## Результати публікації
 
-| RID     | Режим               | Розмір | Чи потрібен встановлений runtime |
-| ------- | ------------------- | -----: | -------------------------------- |
-| win-x64 | Self-contained      |  78 MB | Ні                               |
-| win-x64 | Framework-dependent | 229 KB | Так(.NET10)                      |
-| win-x64 | Single-file         |  71 MB | Ні                               |
-| win-x64 | Trimmed             |  20 MB | Ні                               |
+| RID       | Режим               | Розмір | Чи потрібен встановлений runtime |
+| --------- | ------------------- | -----: | -------------------------------- |
+| win-x64   | Self-contained      |  78 MB | Ні                               |
+| win-x64   | Framework-dependent | 229 KB | Так(.NET10)                      |
+| win-x64   | Single-file         |  71 MB | Ні                               |
+| win-x64   | Trimmed             |  20 MB | Ні                               |
+| linux-x64 | Self-contained      |  80 MB | Ні                               |
+| linux-x64 | Framework-dependent | 153 KB | Так(.NET10)                      |
+| linux-x64 | Single-file         |  71 MB | Ні                               |
+| linux-x64 | Trimmed             |  23 MB | Ні                               |
 
 ## Середовище
 
