@@ -14,7 +14,14 @@ if (!File.Exists(path))
 }
 
 ImportResult<ProductDto> result =
-    ProductCsvImporter.Load(path);
+    Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".csv" => ProductCsvImporter.Load(path),
+        ".json" => ProductJsonImporter.Load(path),
+        _ => new ImportResult<ProductDto>(
+            [],
+            [$"Непідтримуваний формат файлу: {Path.GetExtension(path)}"])
+    };
 
 Console.WriteLine($"Завантажено записів: {result.Items.Count}");
 
