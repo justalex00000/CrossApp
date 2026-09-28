@@ -5,5 +5,4 @@ public record ProductDto(
     string Sku,
     string Name,
     string Unit,
-    int Quantity,
-    string? Note = null);
+    int Quantity) : IImportItem;

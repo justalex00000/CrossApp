@@ -13,22 +13,32 @@ if (!File.Exists(path))
     return 1;
 }
 
-ImportResult<ProductDto> result =
+ImportResult<IImportItem> result =
     Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".csv" => ProductCsvImporter.Load(path),
         ".json" => ProductJsonImporter.Load(path),
-        _ => new ImportResult<ProductDto>(
+        _ => new ImportResult<IImportItem>(
             [],
             [$"Непідтримуваний формат файлу: {Path.GetExtension(path)}"])
     };
 
 Console.WriteLine($"Завантажено записів: {result.Items.Count}");
 
-foreach (ProductDto p in result.Items.Take(5))
+foreach (IImportItem item in result.Items.Take(5))
 {
-    Console.WriteLine(
-        $" {p.Id,-6} {p.Sku,-10} {p.Name,-26} {p.Quantity,5} {p.Unit}");
+    switch (item)
+    {
+        case ProductDto product:
+            Console.WriteLine(
+                $" Товар:  {product.Id,-6} {product.Sku,-10} {product.Name,-26} {product.Quantity,5} {product.Unit}");
+            break;
+
+        case WarehouseDto warehouse:
+            Console.WriteLine(
+                $" Склад:  {warehouse.Id,-6} {warehouse.Name,-26} {warehouse.Address}");
+            break;
+    }
 }
 
 if (result.Errors.Count > 0)
@@ -41,5 +51,16 @@ if (result.Errors.Count > 0)
         Console.WriteLine($" ! {e}");
     }
 }
+
+int total = result.Items.Count + result.Errors.Count;
+int accepted = result.Items.Count;
+int skipped = result.Errors.Count;
+
+double errorPercent =
+    total == 0 ? 0 : skipped * 100.0 / total;
+
+Console.WriteLine(
+    $"Усього: {total}, прийнято: {accepted}, " +
+    $"пропущено: {skipped}, помилок: {errorPercent:F1}%");
 
 return 0;

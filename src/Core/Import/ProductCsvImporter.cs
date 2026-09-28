@@ -6,9 +6,9 @@ public static class ProductCsvImporter
 {
     private const char Separator = ';';
 
-    public static ImportResult<ProductDto> Load(string path)
+    public static ImportResult<IImportItem> Load(string path)
     {
-        var items = new List<ProductDto>();
+        var items = new List<IImportItem>();
         var errors = new List<string>();
 
         string[] lines = File.ReadAllLines(path);
@@ -21,7 +21,7 @@ public static class ProductCsvImporter
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
                 continue;
 
-            if (number == 1 && line.StartsWith("id", StringComparison.OrdinalIgnoreCase))
+            if (number == 1 && line.StartsWith("type", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             switch (ParseLine(line))
@@ -36,7 +36,7 @@ public static class ProductCsvImporter
             }
         }
 
-        return new ImportResult<ProductDto>(items, errors);
+        return new ImportResult<IImportItem>(items, errors);
     }
 
     private static ParseOutcome ParseLine(string line)
@@ -47,21 +47,18 @@ public static class ProductCsvImporter
 
         return parts switch
         {
-            { Length: < 5 } =>
-                new ParseFailed(
-                    $"очікую 5 колонок, отримав {parts.Length}"),
+            ["P", var id, var sku, var name, var unit, var qty]
+                when string.IsNullOrWhiteSpace(sku) ||
+                     string.IsNullOrWhiteSpace(name)
+                => new ParseFailed("SKU або назва порожні"),
 
-            [_, "", _, _, _] or
-            [_, _, "", _, _] =>
-                new ParseFailed("SKU або назва порожні"),
-
-            [_, _, _, _, var qty]
-                when !int.TryParse(qty, out int q) || q < 0 =>
-                new ParseFailed(
+            ["P", _, _, _, _, var qty]
+                when !int.TryParse(qty, out int q) || q < 0
+                => new ParseFailed(
                     $"кількість '{qty}' не є невід'ємним числом"),
 
-            [var id, var sku, var name, var unit, var qty] =>
-                new ParseOk(
+            ["P", var id, var sku, var name, var unit, var qty]
+                => new ParseOk(
                     new ProductDto(
                         id,
                         sku,
@@ -69,15 +66,40 @@ public static class ProductCsvImporter
                         unit,
                         int.Parse(qty))),
 
-            _ =>
+            ["W", var id, var name, var address]
+                when string.IsNullOrWhiteSpace(name)
+                => new ParseFailed("назва складу порожня"),
+
+            ["W", var id, var name, var address]
+                when string.IsNullOrWhiteSpace(address)
+                => new ParseFailed("адреса складу порожня"),
+
+            ["W", var id, var name, var address]
+                => new ParseOk(
+                    new WarehouseDto(
+                        id,
+                        name,
+                        address)),
+
+            ["P", ..] =>
                 new ParseFailed(
-                    $"занадто багато колонок: {parts.Length}")
+                    $"для товару очікую 6 колонок, отримав {parts.Length}"),
+
+            ["W", ..] =>
+                new ParseFailed(
+                    $"для складу очікую 4 колонки, отримав {parts.Length}"),
+
+            [var type, ..] =>
+                new ParseFailed($"невідомий тип '{type}'"),
+
+            _ =>
+                new ParseFailed("некоректний формат рядка")
         };
     }
 
     private abstract record ParseOutcome;
 
-    private sealed record ParseOk(ProductDto Value) : ParseOutcome;
+    private sealed record ParseOk(IImportItem Value) : ParseOutcome;
 
     private sealed record ParseFailed(string Reason) : ParseOutcome;
 }
