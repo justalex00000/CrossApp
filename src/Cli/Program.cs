@@ -1,5 +1,6 @@
 ﻿using Core.Dto;
 using Core.Import;
+using Core.Domain;
 
 string path = args.Length > 0
     ? args[0]
@@ -62,5 +63,57 @@ double errorPercent =
 Console.WriteLine(
     $"Усього: {total}, прийнято: {accepted}, " +
     $"пропущено: {skipped}, помилок: {errorPercent:F1}%");
+
+
+
+
+
+
+Console.WriteLine();
+Console.WriteLine("=== Сценарій 1: успіх ===");
+
+Product domainProduct = Product.Create(
+    "P-001", "sku-001", "Цемент М400 25кг", "шт", 100);
+
+Console.WriteLine(domainProduct);
+
+domainProduct.RegisterArrival(50);
+domainProduct.Issue(30);
+
+Console.WriteLine(domainProduct);
+
+Console.WriteLine();
+Console.WriteLine("=== Сценарій 2: порушення інваріантів ===");
+
+TryDo("видача більша за залишок",
+    () => domainProduct.Issue(1000));
+
+TryDo("порожній SKU",
+    () => Product.Create("P-002", " ", "Пісок", "т", 10));
+
+TryDo("від'ємний залишок",
+    () => Product.Create("P-003", "SKU-003", "Цегла", "шт", -5));
+
+ProductDto dto = domainProduct.ToDto();
+Product restored = Product.FromDto(dto);
+
+Console.WriteLine();
+Console.WriteLine($"Відновлено з DTO: {restored}");
+
+static void TryDo(string title, Action action)
+{
+    try
+    {
+        action();
+        Console.WriteLine(
+            $" {title}: виняток НЕ спрацював — інваріант відсутній!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(
+            $" {title}: {ex.GetType().Name} — {ex.Message}");
+    }
+}
+
 
 return 0;
