@@ -66,7 +66,14 @@ Console.WriteLine(
 
 
 
+Console.WriteLine();
+ImportResult<Product> domainResult = ProductDomainMapper.Map(result);
 
+Console.WriteLine(
+    $"Доменних товарів створено: {domainResult.Items.Count}");
+
+foreach (string error in domainResult.Errors)
+    Console.WriteLine($" ! {error}");
 
 
 Console.WriteLine();
@@ -115,5 +122,35 @@ static void TryDo(string title, Action action)
     }
 }
 
+Console.WriteLine();
+Console.WriteLine("=== Переміщення між позиціями ===");
+
+Product source = Product.Create(
+    "P-010", "SKU-010", "Цемент", "шт", 100);
+
+Product destination = Product.Create(
+    "P-011", "SKU-010", "Цемент", "шт", 20);
+
+ProductTransferService.Transfer(source, destination, 30);
+
+Console.WriteLine($"Джерело: {source}");
+Console.WriteLine($"Призначення: {destination}");
+
+
+Console.WriteLine();
+Console.WriteLine("=== Стани замовлення ===");
+
+Order order = Order.Create("ORD-001");
+
+Console.WriteLine(order.Status);
+
+order.Confirm();
+Console.WriteLine(order.Status);
+
+TryDo("повторне підтвердження",
+    () => order.Confirm());
+
+order.Cancel();
+Console.WriteLine(order.Status);
 
 return 0;
