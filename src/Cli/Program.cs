@@ -82,6 +82,7 @@ Console.WriteLine("=== Сценарій 1: успіх ===");
 Product domainProduct = Product.Create(
     "P-001", "sku-001", "Цемент М400 25кг", "шт", 100);
 
+
 Console.WriteLine(domainProduct);
 
 domainProduct.RegisterArrival(50);
