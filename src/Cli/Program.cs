@@ -3,16 +3,7 @@ using Core.Abstractions;
 using Core.Services;
 using Core.Storage;
 
-bool useFile = args.Contains("--file");
-
-string dataPath = Path.Combine(
-    AppContext.BaseDirectory,
-    "data",
-    "catalog.json");
-
-ICatalogStore store = useFile
-    ? new FileCatalogStore(dataPath)
-    : new InMemoryCatalogStore(SampleData.Products());
+ICatalogStore store = StoreFactory.Create(args);
 
 if (args.Contains("--cache"))
 {
@@ -27,7 +18,7 @@ var created = service.Add(
     "SKU-101",
     "Кабель UTP cat6",
     "м",
-    50);
+    100);
 
 Console.WriteLine($"Додано: {created}");
 

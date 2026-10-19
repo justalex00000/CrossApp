@@ -15,6 +15,8 @@ CrossApp/
 │   │   ├── Program.cs
 │   │   └── Cli.csproj
 │   └── Core/
+│       ├── Abstractions/
+│       │   └── ICatalogStore.cs
 │       ├── Domain/
 │       │   ├── Product.cs
 │       │   ├── ProductTransferService.cs
@@ -28,6 +30,13 @@ CrossApp/
 │       │   ├── ProductCsvImporter.cs
 │       │   ├── ProductJsonImporter.cs
 │       │   └── ProductDomainMapper.cs
+│       ├── Services/
+│       │   └── CatalogService.cs
+│       ├── Storage/
+│       │   ├── InMemoryCatalogStore.cs
+│       │   ├── FileCatalogStore.cs
+│       │   ├── StoreFactory.cs
+│       │   └── CachingCatalogStore.cs
 │       ├── EnvironmentInfo.cs
 │       └── Core.csproj
 ├── data/
@@ -44,6 +53,8 @@ dotnet build
 ```
 
 ## Запуск
+
+### Імпорт даних
 
 Запуск із файлом за замовчуванням:
 
@@ -64,6 +75,36 @@ dotnet run --project src/Cli -- data/sample.json
 ```
 
 Програма імпортує дані, виводить завантажені записи та повідомлення про помилки, створює доменні об'єкти й демонструє перевірку інваріантів.
+
+### Робота з каталогом товарів
+
+Запуск із використанням сховища в пам'яті:
+
+```bash
+dotnet run --project src/Cli
+```
+
+Запуск із файловим сховищем:
+
+```bash
+dotnet run --project src/Cli -- --file
+```
+
+Запуск із кешуванням сховища в пам'яті:
+
+```bash
+dotnet run --project src/Cli -- --cache
+```
+
+Запуск із файловим сховищем та кешуванням:
+
+```bash
+dotnet run --project src/Cli -- --file --cache
+```
+
+Параметр `--file` вмикає збереження каталогу у JSON-файл. Параметр `--cache` додає декоратор кешування до вибраного сховища.
+
+Програма демонструє додавання товару, прихід і видачу, пошук товарів за залишком, виведення каталогу та обробку помилок.
 
 ## Доменна модель
 
@@ -117,6 +158,18 @@ dotnet run --project src/Cli -- data/sample.json
 Програма підтримує CSV та JSON. Для результатів імпорту використовується `ImportResult<T>`, що містить успішно завантажені записи та список помилок.
 
 `ProductDomainMapper` перетворює імпортовані DTO товарів на доменні об'єкти. Дані, що порушують доменні інваріанти, не створюються як доменні сутності.
+
+## Інтерфейс ICatalogStore
+
+`ICatalogStore` визначає спільний контракт для роботи з каталогом товарів. Він надає методи:
+
+- `List()` - отримання списку товарів;
+- `GetById(string id)` - пошук товару за ідентифікатором;
+- `Add(Product item)` - додавання товару;
+- `Update(Product item)` - оновлення товару;
+- `Remove(string id)` - видалення товару.
+
+Інтерфейс дозволяє використовувати різні реалізації сховища без зміни бізнес-логіки.
 
 ## Публікація
 
