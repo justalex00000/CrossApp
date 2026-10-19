@@ -171,6 +171,38 @@ dotnet run --project src/Cli -- --file --cache
 
 Інтерфейс дозволяє використовувати різні реалізації сховища без зміни бізнес-логіки.
 
+## Композиційний корінь
+
+`Program.cs` виконує роль композиційного кореня застосунку: створює потрібне сховище, передає його сервісу та запускає сценарії роботи.
+
+Сховище вибирається за аргументами командного рядка:
+
+- без `--file` використовується `InMemoryCatalogStore`;
+- з `--file` використовується `FileCatalogStore`;
+- з `--cache` до вибраного сховища додається `CachingCatalogStore`.
+
+Схема залежностей:
+
+```text
+Cli (Program.cs)
+       |
+       v
+CatalogService
+       |
+       v
+ICatalogStore
+       |
+       +---- InMemoryCatalogStore
+       |
+       +---- FileCatalogStore
+       |
+       +---- CachingCatalogStore
+                    |
+                    v
+               ICatalogStore
+```
+
+
 ## Публікація
 
 ### Self-contained
