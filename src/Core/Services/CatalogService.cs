@@ -1,5 +1,6 @@
 using Core.Abstractions;
 using Core.Domain;
+using Core.Events;
 
 namespace Core.Services;
 
@@ -7,9 +8,26 @@ public sealed class CatalogService
 {
     private readonly ICatalogStore _store;
 
+    public event EventHandler<CatalogChangedEventArgs>? Changed;
+
     public CatalogService(ICatalogStore store)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
+    }
+
+    private void OnChanged(
+        Product product,
+        CatalogChangeKind kind,
+        int delta,
+        int? quantityAfter = null)
+    {
+        Changed?.Invoke(
+            this,
+            new CatalogChangedEventArgs(
+                product.Id,
+                kind,
+                delta,
+                quantityAfter ?? product.Quantity));
     }
 
     public Product Add(string sku, string name, string unit, int quantity)
@@ -23,6 +41,8 @@ public sealed class CatalogService
 
         _store.Add(product);
 
+        OnChanged(product, CatalogChangeKind.Added, quantity);
+
         return product;
     }
 
@@ -34,6 +54,8 @@ public sealed class CatalogService
 
         product.RegisterArrival(quantity);
         _store.Update(product);
+
+        OnChanged(product, CatalogChangeKind.Received, quantity);
     }
 
     public void Issue(string id, int quantity)
@@ -44,6 +66,8 @@ public sealed class CatalogService
 
         product.Issue(quantity);
         _store.Update(product);
+
+        OnChanged(product, CatalogChangeKind.Issued, -quantity);
     }
 
     public IReadOnlyList<Product> All()
@@ -58,7 +82,23 @@ public sealed class CatalogService
 
     public bool Remove(string id)
     {
-        return _store.Remove(id);
+        Product? product = _store.GetById(id);
+
+        if (product is null)
+            return false;
+
+        int removedQuantity = product.Quantity;
+
+        if (!_store.Remove(id))
+            return false;
+
+        OnChanged(
+            product,
+            CatalogChangeKind.Removed,
+            -removedQuantity,
+            0);
+
+        return true;
     }
 
     public IReadOnlyList<Product> Search(Func<Product, bool> predicate)
