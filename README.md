@@ -13,9 +13,13 @@ CrossApp/
 ├── src/
 │   ├── Cli/
 │   │   ├── Program.cs
+│   │   ├── Notifications/
+│   │   │   ├── ConsoleSink.cs
+│   │   │   └── FileSink.cs
 │   │   └── Cli.csproj
 │   └── Core/
 │       ├── Abstractions/
+│       │   ├── INotificationSink.cs
 │       │   └── ICatalogStore.cs
 │       ├── Domain/
 │       │   ├── Product.cs
@@ -26,6 +30,9 @@ CrossApp/
 │       │   ├── IImportItem.cs
 │       │   ├── ImportResult.cs
 │       │   └── WarehouseDto.cs
+│       ├── Events/
+│       │   ├── CatalogChangedEventArgs.cs
+│       │   └── CatalogChangeKind.cs
 │       ├── Import/
 │       │   ├── ProductCsvImporter.cs
 │       │   ├── ProductJsonImporter.cs
@@ -202,6 +209,45 @@ ICatalogStore
                ICatalogStore
 ```
 
+
+## Доменні події
+
+Для сповіщення про зміни каталогу товарів використовується подія `Changed` у класі `CatalogService`. Вона повідомляє про успішне додавання товару, прихід або видачу товару та інші реалізовані операції.
+
+Для опису подій створено перелік `CatalogChangeKind` і клас `CatalogChangedEventArgs`, який містить ідентифікатор товару, тип операції, зміну кількості, залишок після операції та час події.
+
+## Обробка подій
+
+У `Program.cs` створюється обробник події, який виводить інформацію про зміни в консоль і записує її у файл `logs/app.log`.
+
+Підписка на подію виконується за допомогою:
+
+```csharp
+service.Changed += OnCatalogChanged;
+```
+
+Відписка від події виконується за допомогою:
+
+```csharp
+service.Changed -= OnCatalogChanged;
+```
+
+Для підрахунку кількості подій також можна використати лямбда-вираз:
+
+```csharp
+int changes = 0;
+service.Changed += (_, _) => changes++;
+```
+
+## Делегати Func та лямбда-вирази
+
+Для пошуку товарів за заданою умовою використовується делегат `Func<Product, bool>`. Він дозволяє передавати умову пошуку як параметр методу.
+
+Приклад пошуку товарів із залишком менше 20 одиниць:
+
+```csharp
+var products = service.Search(p => p.Quantity < 20);
+```
 
 ## Публікація
 

@@ -1,8 +1,10 @@
 ﻿using Core;
+using Core.Import;
 using Core.Abstractions;
 using Core.Services;
 using Core.Storage;
 using Core.Events;
+using Cli.Notifications;
 
 Console.WriteLine("========== ЛАБОРАТОРНА РОБОТА 5 ==========");
 ICatalogStore store = StoreFactory.Create(args);
@@ -146,3 +148,30 @@ service.Changed -= counterHandler;
 
 Console.WriteLine();
 Console.WriteLine($"Журнал подій: {logPath}");
+
+
+Console.WriteLine();
+Console.WriteLine("========== 1 ДОДАТКОВЕ ==========");
+
+var sinkService = new CatalogService(
+    store,
+    [
+        new ConsoleSink(),
+        new FileSink(logPath)
+    ]);
+
+var sinkProduct = sinkService.Add(
+    "SKU-SINK",
+    "Товар для перевірки sink",
+    "шт",
+    15);
+
+sinkService.Receive(sinkProduct.Id, 10);
+
+sinkService.Issue(sinkProduct.Id, 5);
+
+Console.WriteLine();
+Console.WriteLine("========== 2 ДОДАТКОВЕ ==========");
+var result = ProductCsvImporter.Load(
+    "data/sample.csv",
+    message => Console.WriteLine($"Пропущено: {message}"));

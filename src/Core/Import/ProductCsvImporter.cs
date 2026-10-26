@@ -1,3 +1,4 @@
+
 using Core.Dto;
 
 namespace Core.Import;
@@ -6,7 +7,9 @@ public static class ProductCsvImporter
 {
     private const char Separator = ';';
 
-    public static ImportResult<IImportItem> Load(string path)
+    public static ImportResult<IImportItem> Load(
+        string path,
+        Action<string>? reportSkippedRow = null)
     {
         var items = new List<IImportItem>();
         var errors = new List<string>();
@@ -21,7 +24,8 @@ public static class ProductCsvImporter
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
                 continue;
 
-            if (number == 1 && line.StartsWith("type", StringComparison.OrdinalIgnoreCase))
+            if (number == 1 &&
+                line.StartsWith("type", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             switch (ParseLine(line))
@@ -31,7 +35,9 @@ public static class ProductCsvImporter
                     break;
 
                 case ParseFailed failed:
-                    errors.Add($"рядок {number}: {failed.Reason}");
+                    string error = $"рядок {number}: {failed.Reason}";
+                    errors.Add(error);
+                    reportSkippedRow?.Invoke(error);
                     break;
             }
         }
@@ -59,12 +65,7 @@ public static class ProductCsvImporter
 
             ["P", var id, var sku, var name, var unit, var qty]
                 => new ParseOk(
-                    new ProductDto(
-                        id,
-                        sku,
-                        name,
-                        unit,
-                        int.Parse(qty))),
+                    new ProductDto(id, sku, name, unit, int.Parse(qty))),
 
             ["W", var id, var name, var address]
                 when string.IsNullOrWhiteSpace(name)
@@ -76,10 +77,7 @@ public static class ProductCsvImporter
 
             ["W", var id, var name, var address]
                 => new ParseOk(
-                    new WarehouseDto(
-                        id,
-                        name,
-                        address)),
+                    new WarehouseDto(id, name, address)),
 
             ["P", ..] =>
                 new ParseFailed(

@@ -8,11 +8,16 @@ public sealed class CatalogService
 {
     private readonly ICatalogStore _store;
 
+    private readonly IReadOnlyList<INotificationSink> _sinks;
+
     public event EventHandler<CatalogChangedEventArgs>? Changed;
 
-    public CatalogService(ICatalogStore store)
+    public CatalogService(
+        ICatalogStore store,
+        IEnumerable<INotificationSink>? sinks = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
+        _sinks = sinks?.ToList() ?? [];
     }
 
     private void OnChanged(
@@ -21,13 +26,18 @@ public sealed class CatalogService
         int delta,
         int? quantityAfter = null)
     {
-        Changed?.Invoke(
-            this,
-            new CatalogChangedEventArgs(
-                product.Id,
-                kind,
-                delta,
-                quantityAfter ?? product.Quantity));
+        var eventArgs = new CatalogChangedEventArgs(
+            product.Id,
+            kind,
+            delta,
+            quantityAfter ?? product.Quantity);
+
+        Changed?.Invoke(this, eventArgs);
+
+        foreach (var sink in _sinks)
+        {
+            sink.Notify(eventArgs);
+        }
     }
 
     public Product Add(string sku, string name, string unit, int quantity)
