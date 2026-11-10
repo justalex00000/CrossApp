@@ -1,12 +1,9 @@
 ﻿using Core;
-using Core.Import;
 using Core.Abstractions;
 using Core.Services;
 using Core.Storage;
-using Core.Events;
-using Cli.Notifications;
+using Core.Reports;
 
-Console.WriteLine("========== ЛАБОРАТОРНА РОБОТА 5 ==========");
 ICatalogStore store = StoreFactory.Create(args);
 
 if (args.Contains("--cache"))
@@ -17,161 +14,59 @@ if (args.Contains("--cache"))
 var service = new CatalogService(store);
 
 Console.WriteLine($"Сховище: {store.GetType().Name}");
-
-var created = service.Add(
-    "SKU-101",
-    "Кабель UTP cat6",
-    "м",
-    100);
-
-Console.WriteLine($"Додано: {created}");
-
-service.Receive(created.Id, 25);
-
-service.Issue(created.Id, 10);
-
-Console.WriteLine($"Після приходу та видачі: {service.Find(created.Id)}");
-
 Console.WriteLine();
-Console.WriteLine("=== Товари із залишком менше 50 ===");
 
-foreach (var product in service.Search(p => p.Quantity < 50))
+var items = service.All();
+
+var command = args.FirstOrDefault(a => !a.StartsWith("--"))
+              ?? "report-top";
+
+switch (command)
 {
-    Console.WriteLine(product);
+    case "report-top":
+        Console.WriteLine("=== Топ-5 товарів за кількістю ===");
+        Print(ReportService.TopByQuantity(items, 5));
+        break;
+
+    case "report-low":
+        Console.WriteLine("=== Товари із залишком менше 10 ===");
+        Print(ReportService.LowStock(items, 10));
+        break;
+
+    case "report-groups":
+        Console.WriteLine("=== Групування товарів за одиницями виміру ===");
+
+        foreach (var g in ReportService.ByUnit(items))
+        {
+            Console.WriteLine(
+                $" {g.Key,-6} позицій: {g.Count,3} сумарно: {g.TotalQuantity,6}");
+        }
+
+        break;
+
+    case "report-sum":
+        Console.WriteLine("=== Загальна статистика ===");
+
+        var t = ReportService.Totals(items);
+
+        Console.WriteLine(
+            $" позицій {t.Items}, всього {t.Total}, " +
+            $"середнє {t.Average:F2}, макс {t.Max}");
+
+        break;
+
+    default:
+        Console.WriteLine(
+            "Доступні звіти: report-top | report-low | " +
+            "report-groups | report-sum");
+        break;
 }
 
-Console.WriteLine();
-Console.WriteLine("=== Усі товари ===");
-
-foreach (var product in service.All())
+static void Print(IReadOnlyList<StockLine> lines)
 {
-    Console.WriteLine(
-        $" {product.Id} {product.Sku,-10} " +
-        $"{product.Name,-22} {product.Quantity,5} {product.Unit}");
+    foreach (var l in lines)
+    {
+        Console.WriteLine(
+            $" {l.Sku,-10} {l.Name,-22} {l.Quantity,6} {l.Unit}");
+    }
 }
-
-try
-{
-    service.Receive("missing-id", 10);
-}
-catch (InvalidOperationException ex)
-{
-    Console.WriteLine($"Очікувана помилка: {ex.Message}");
-}
-
-try
-{
-    store.Add(created);
-}
-catch (InvalidOperationException ex)
-{
-    Console.WriteLine($"Очікувана помилка: {ex.Message}");
-}
-
-
-Console.WriteLine();
-Console.WriteLine("========== ЛАБОРАТОРНА РОБОТА 6 ==========");
-
-var logPath = Path.Combine(
-    AppContext.BaseDirectory,
-    "logs",
-    "app.log");
-
-Directory.CreateDirectory(
-    Path.GetDirectoryName(logPath)!);
-
-void OnCatalogChanged(
-    object? sender,
-    CatalogChangedEventArgs e)
-{
-    var line =
-        $"{e.At:HH:mm:ss} {e.Kind,-8} {e.Id} " +
-        $"{e.Delta,4:+0;-0} → залишок {e.QuantityAfter}";
-
-    Console.WriteLine(line);
-
-    File.AppendAllText(
-        logPath,
-        line + Environment.NewLine);
-}
-
-int changes = 0;
-
-EventHandler<CatalogChangedEventArgs> counterHandler =
-    (_, _) => changes++;
-
-service.Changed += OnCatalogChanged;
-service.Changed += counterHandler;
-
-var eventProduct = service.Add(
-    "SKU-LAB06",
-    "Тестовий товар для подій",
-    "шт",
-    50);
-
-service.Receive(eventProduct.Id, 25);
-service.Issue(eventProduct.Id, 10);
-
-Console.WriteLine($"Подій отримано: {changes}");
-
-service.Changed -= OnCatalogChanged;
-
-service.Receive(eventProduct.Id, 5);
-
-Console.WriteLine(
-    $"Подій отримано після відписки першого підписника: {changes}");
-
-int changesBeforeError = changes;
-
-try
-{
-    service.Receive(eventProduct.Id, -5);
-}
-catch (ArgumentException ex)
-{
-    Console.WriteLine($"Очікувана помилка: {ex.Message}");
-}
-
-Console.WriteLine(
-    $"Подій після невдалої операції: {changes} " +
-    $"(до операції: {changesBeforeError})");
-
-Console.WriteLine();
-Console.WriteLine("=== Пошук товарів із залишком менше 20 ===");
-
-foreach (var product in service.Search(p => p.Quantity < 20))
-{
-    Console.WriteLine(product);
-}
-
-service.Changed -= counterHandler;
-
-Console.WriteLine();
-Console.WriteLine($"Журнал подій: {logPath}");
-
-
-Console.WriteLine();
-Console.WriteLine("========== 1 ДОДАТКОВЕ ==========");
-
-var sinkService = new CatalogService(
-    store,
-    [
-        new ConsoleSink(),
-        new FileSink(logPath)
-    ]);
-
-var sinkProduct = sinkService.Add(
-    "SKU-SINK",
-    "Товар для перевірки sink",
-    "шт",
-    15);
-
-sinkService.Receive(sinkProduct.Id, 10);
-
-sinkService.Issue(sinkProduct.Id, 5);
-
-Console.WriteLine();
-Console.WriteLine("========== 2 ДОДАТКОВЕ ==========");
-var result = ProductCsvImporter.Load(
-    "data/sample.csv",
-    message => Console.WriteLine($"Пропущено: {message}"));

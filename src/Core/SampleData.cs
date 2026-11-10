@@ -22,7 +22,10 @@ public static class SampleData
             Product.Create("P-012", "SKU-012", "Саморізи", "упаковка", 80),
             Product.Create("P-013", "SKU-013", "Утеплювач", "упаковка", 60),
             Product.Create("P-014", "SKU-014", "Ґрунтовка", "л", 100),
-            Product.Create("P-015", "SKU-015", "Піна монтажна", "балон", 40)
+            Product.Create("P-015", "SKU-015", "Піна монтажна", "балон", 40),
+            Product.Create("P-016", "SKU-016", "Пісок будівельний", "т", 5),
+            Product.Create("P-017", "SKU-017", "Щебінь", "т", 8),
+            Product.Create("P-018", "SKU-018", "Шпаклівка", "мішок", 6)
         ];
     }
 }
