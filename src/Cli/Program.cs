@@ -115,6 +115,35 @@ switch (command)
         RunBenchmark();
         break;
 
+    case "report-deferred":
+        Console.WriteLine("=== Демонстрація відкладеного виконання LINQ ===");
+
+        var source = service.All().ToList();
+
+        var query = source.Where(p => p.Quantity < 10);
+
+        Console.WriteLine(
+            $"Кількість товарів до додавання: {query.Count()}");
+
+        source.Add(Product.Create(
+            "tmp00001",
+            "SKU-999",
+            "Тестовий товар",
+            "шт",
+            3));
+
+        Console.WriteLine(
+            $"Кількість товарів після додавання: {query.Count()}");
+
+        var snapshot = query.ToList();
+
+        source.Clear();
+
+        Console.WriteLine(
+            $"Кількість у збереженому списку після очищення: {snapshot.Count}");
+
+        break;
+
     default:
         Console.WriteLine("Доступні команди:");
         Console.WriteLine(
@@ -122,7 +151,7 @@ switch (command)
         Console.WriteLine(
             "report-groups-query | report-top-extension | report-low-extension");
         Console.WriteLine(
-            "report-join | report-groupjoin | benchmark");
+            "report-join | report-groupjoin | benchmark | report-deferred");
         break;
 }
 

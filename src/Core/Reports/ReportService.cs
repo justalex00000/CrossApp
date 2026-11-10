@@ -20,7 +20,9 @@ public static class ReportService
         IEnumerable<Product> source,
         int n) =>
         source
-            .TopBy(p => p.Quantity, n, p => p.Sku)
+            .OrderByDescending(p => p.Quantity)
+            .ThenBy(p => p.Sku, StringComparer.Ordinal)
+            .Take(n)
             .Select(p => new StockLine(
                 p.Sku, p.Name, p.Quantity, p.Unit))
             .ToList();

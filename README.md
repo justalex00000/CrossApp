@@ -22,6 +22,7 @@ CrossApp/
 │       │   ├── INotificationSink.cs
 │       │   └── ICatalogStore.cs
 │       ├── Domain/
+│       │   ├── Movement.cs
 │       │   ├── Product.cs
 │       │   ├── ProductTransferService.cs
 │       │   └── Order.cs
@@ -37,6 +38,13 @@ CrossApp/
 │       │   ├── ProductCsvImporter.cs
 │       │   ├── ProductJsonImporter.cs
 │       │   └── ProductDomainMapper.cs
+│       ├── Reports/
+│       │   ├── GroupSummary.cs
+│       │   ├── MovementGroupLine.cs
+│       │   ├── MovementLine.cs
+│       │   ├── ReportExtensions.cs
+│       │   ├── ReportService.cs
+│       │   └── StockLine.cs
 │       ├── Services/
 │       │   └── CatalogService.cs
 │       ├── Storage/
@@ -224,6 +232,56 @@ service.Changed += (_, _) => changes++;
 ```csharp
 var products = service.Search(p => p.Quantity < 20);
 ```
+
+## LINQ-звіти та відкладене виконання
+
+Для формування звітів використовується LINQ. Клас `ReportService` реалізує фільтрацію товарів, сортування, групування за одиницями виміру, обчислення загальної статистики та вибірку товарів із найбільшими або найменшими залишками.
+
+Доступні команди:
+
+```bash
+dotnet run --project src/Cli -- report-top
+dotnet run --project src/Cli -- report-low
+dotnet run --project src/Cli -- report-groups
+dotnet run --project src/Cli -- report-sum
+```
+
+Для демонстрації додаткових можливостей LINQ реалізовано запитний синтаксис групування, метод розширення `TopBy`, а також об'єднання колекцій за допомогою `Join` і `GroupJoin`.
+
+```bash
+dotnet run --project src/Cli -- report-groups-query
+dotnet run --project src/Cli -- report-top-extension
+dotnet run --project src/Cli -- report-low-extension
+dotnet run --project src/Cli -- report-join
+dotnet run --project src/Cli -- report-groupjoin
+```
+
+Для демонстрації відкладеного виконання LINQ використовується запит, який вибирає товари із залишком менше 10 одиниць:
+
+```csharp
+var source = service.All().ToList();
+
+var query = source.Where(p => p.Quantity < 10);
+
+Console.WriteLine($"Кількість товарів: {query.Count()}");
+
+source.Add(Product.Create(
+    "tmp00001",
+    "SKU-999",
+    "Тестовий товар",
+    "шт",
+    3));
+
+Console.WriteLine($"Після додавання: {query.Count()}");
+
+var snapshot = query.ToList();
+
+source.Clear();
+
+Console.WriteLine($"Кількість у збереженому списку: {snapshot.Count}");
+```
+
+Відкладене виконання LINQ. Запит створюється за допомогою Where(), але фактично виконується лише під час звернення до його результату, наприклад через Count(). Перший виклик Count() підраховує товари, які відповідають умові на момент виконання запиту. Після додавання нового товару, що також відповідає умові, другий виклик Count() повертає більше значення, оскільки запит виконується повторно на оновленій колекції. Виклик ToList() створює окремий список результатів, який надалі не залежить від змін початкової колекції.
 
 ## Публікація
 
