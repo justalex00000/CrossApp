@@ -17,43 +17,58 @@ CrossApp/
 │   │   │   ├── ConsoleSink.cs
 │   │   │   └── FileSink.cs
 │   │   └── Cli.csproj
-│   └── Core/
-│       ├── Abstractions/
-│       │   ├── INotificationSink.cs
-│       │   └── ICatalogStore.cs
-│       ├── Domain/
-│       │   ├── Movement.cs
-│       │   ├── Product.cs
-│       │   ├── ProductTransferService.cs
-│       │   └── Order.cs
-│       ├── Dto/
-│       │   ├── ProductDto.cs
-│       │   ├── IImportItem.cs
-│       │   ├── ImportResult.cs
-│       │   └── WarehouseDto.cs
-│       ├── Events/
-│       │   ├── CatalogChangedEventArgs.cs
-│       │   └── CatalogChangeKind.cs
-│       ├── Import/
-│       │   ├── ProductCsvImporter.cs
-│       │   ├── ProductJsonImporter.cs
-│       │   └── ProductDomainMapper.cs
-│       ├── Reports/
-│       │   ├── GroupSummary.cs
-│       │   ├── MovementGroupLine.cs
-│       │   ├── MovementLine.cs
-│       │   ├── ReportExtensions.cs
-│       │   ├── ReportService.cs
-│       │   └── StockLine.cs
-│       ├── Services/
-│       │   └── CatalogService.cs
-│       ├── Storage/
-│       │   ├── InMemoryCatalogStore.cs
-│       │   ├── FileCatalogStore.cs
-│       │   ├── StoreFactory.cs
-│       │   └── CachingCatalogStore.cs
-│       ├── EnvironmentInfo.cs
-│       └── Core.csproj
+│   │
+│   ├── Core/
+│   │   ├── Abstractions/
+│   │   │   ├── INotificationSink.cs
+│   │   │   ├── ICatalogStore.cs
+│   │   │   ├── ICatalogImporter.cs
+│   │   │   └── IStreamingCatalogImporter.cs
+│   │   ├── Domain/
+│   │   │   ├── Movement.cs
+│   │   │   ├── Product.cs
+│   │   │   ├── ProductTransferService.cs
+│   │   │   └── Order.cs
+│   │   ├── Dto/
+│   │   │   ├── ProductDto.cs
+│   │   │   ├── IImportItem.cs
+│   │   │   ├── ImportResult.cs
+│   │   │   └── WarehouseDto.cs
+│   │   ├── Events/
+│   │   │   ├── CatalogChangedEventArgs.cs
+│   │   │   └── CatalogChangeKind.cs
+│   │   ├── Import/
+│   │   │   ├── ProductCsvImporter.cs
+│   │   │   ├── ProductJsonImporter.cs
+│   │   │   └── ProductDomainMapper.cs
+│   │   ├── Reports/
+│   │   │   ├── GroupSummary.cs
+│   │   │   ├── MovementGroupLine.cs
+│   │   │   ├── MovementLine.cs
+│   │   │   ├── ReportExtensions.cs
+│   │   │   ├── ReportService.cs
+│   │   │   └── StockLine.cs
+│   │   ├── Services/
+│   │   │   └── CatalogService.cs
+│   │   ├── Storage/
+│   │   │   ├── InMemoryCatalogStore.cs
+│   │   │   ├── FileCatalogStore.cs
+│   │   │   ├── StoreFactory.cs
+│   │   │   ├── CachingCatalogStore.cs
+│   │   │   └── JsonCatalogImporter.cs
+│   │   ├── EnvironmentInfo.cs
+│   │   ├── DomainException.cs
+│   │   ├── SampleData.cs
+│   │   └── Core.csproj
+│   │
+│   └── tests/Core.Tests
+│       ├── CatalogServiceTests.cs
+│       ├── ReportServiceTests.cs
+│       ├── ImportTests.cs
+│       ├── TestData/
+│       │   └── TestData.cs
+│       └── Core.Tests.csproj
+│
 ├── data/
 │   ├── sample.csv
 │   └── sample.json
@@ -282,6 +297,65 @@ Console.WriteLine($"Кількість у збереженому списку: {
 ```
 
 Відкладене виконання LINQ. Запит створюється за допомогою Where(), але фактично виконується лише під час звернення до його результату, наприклад через Count(). Перший виклик Count() підраховує товари, які відповідають умові на момент виконання запиту. Після додавання нового товару, що також відповідає умові, другий виклик Count() повертає більше значення, оскільки запит виконується повторно на оновленій колекції. Виклик ToList() створює окремий список результатів, який надалі не залежить від змін початкової колекції.
+
+## Тестування
+
+Для перевірки роботи застосунку використовуються автоматичні тести на основі тестового проєкту `Tests`.
+
+Запуск усіх тестів із кореневої папки проєкту:
+
+```bash
+dotnet test
+```
+
+### Перевірка покриття коду
+
+Для збору інформації про покриття тестами використовується Coverlet:
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+Результат зберігається у файлі `coverage.cobertura.xml` у папці `TestResults`.
+
+Для формування HTML-звіту можна використати ReportGenerator:
+
+```bash
+reportgenerator `
+  -reports:"tests/Core.Tests/TestResults/**/coverage.cobertura.xml" `
+  -targetdir:"coverage-report" `
+  -reporttypes:Html
+```
+
+Після виконання команди звіт доступний у файлі `coverage-report/index.html`.
+
+## Скасування асинхронного імпорту
+
+Асинхронний і потоковий імпорт підтримують скасування через `CancellationToken`.
+
+Для перевірки скасування потрібно запустити одну з команд:
+
+```bash
+dotnet run --project src/Cli -- import-async
+```
+
+або:
+
+```bash
+dotnet run --project src/Cli -- import-stream
+```
+
+Під час виконання імпорту натискання `Ctrl+C` надсилає запит на скасування. Програма обробляє `OperationCanceledException` і виводить повідомлення про скасування.
+
+Також передбачено параметр `--timeout`, який встановлює обмеження часу виконання імпорту — 30 секунд:
+
+```bash
+dotnet run --project src/Cli -- import-async --timeout
+dotnet run --project src/Cli -- import-stream --timeout
+```
+
+Для перевірки тайм-ауту можна тимчасово зменшити значення `CancelAfter()` у `Program.cs`. Невеликий тестовий файл може обробитися швидше, ніж спрацює тайм-аут.
+
 
 ## Публікація
 
