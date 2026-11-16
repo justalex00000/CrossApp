@@ -119,4 +119,42 @@ public sealed class CatalogService
             .Where(predicate)
             .ToList();
     }
+
+    public async Task<int> ImportAsync(
+        ICatalogImporter importer,
+        string path,
+        CancellationToken ct = default,
+        IProgress<int>? progress = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var items = await importer.LoadAsync(path, ct);
+
+        int added = 0;
+
+        foreach (var item in items)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (_store.GetById(item.Id) is not null)
+                continue;
+
+            _store.Add(item);
+
+            OnChanged(item, CatalogChangeKind.Added, item.Quantity);
+
+            added++;
+
+            int percent = items.Count == 0
+                ? 100
+                : added * 100 / items.Count;
+
+            progress?.Report(percent);
+        }
+
+        if (items.Count == 0)
+            progress?.Report(100);
+
+        return added;
+    }
 }

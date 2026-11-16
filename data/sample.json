@@ -1,3 +1,4 @@
+
 [
   {
     "type": "P",
@@ -97,7 +98,7 @@
     "sku": "SKU-011",
     "name": "Гіпсокартон 12.5мм",
     "unit": "лист",
-    "quantity": null
+    "quantity": 95
   },
   {
     "type": "P",
@@ -105,20 +106,70 @@
     "sku": "SKU-012",
     "name": "Стрічка армуюча",
     "unit": "м",
-    "quantity": "багато"
+    "quantity": 450
   },
   {
     "type": "P",
     "id": "P-013",
-    "sku": "",
-    "name": "Без артикулу",
-    "unit": "шт",
-    "quantity": 10
+    "sku": "SKU-013",
+    "name": "Мінеральна вата",
+    "unit": "уп",
+    "quantity": 75
   },
   {
-    "type": "W",
-    "id": "W-004",
-    "name": "Центральний склад",
-    "address": null
+    "type": "P",
+    "id": "P-014",
+    "sku": "SKU-014",
+    "name": "Дошка обрізна",
+    "unit": "м3",
+    "quantity": 24
+  },
+  {
+    "type": "P",
+    "id": "P-015",
+    "sku": "SKU-015",
+    "name": "Ламінат дуб натуральний",
+    "unit": "м2",
+    "quantity": 180
+  },
+  {
+    "type": "P",
+    "id": "P-016",
+    "sku": "SKU-016",
+    "name": "Плінтус пластиковий",
+    "unit": "м",
+    "quantity": 320
+  },
+  {
+    "type": "P",
+    "id": "P-017",
+    "sku": "SKU-017",
+    "name": "Герметик силіконовий",
+    "unit": "шт",
+    "quantity": 85
+  },
+  {
+    "type": "P",
+    "id": "P-018",
+    "sku": "SKU-018",
+    "name": "Монтажна піна",
+    "unit": "балон",
+    "quantity": 64
+  },
+  {
+    "type": "P",
+    "id": "P-019",
+    "sku": "SKU-019",
+    "name": "Труба ПВХ 50мм",
+    "unit": "м",
+    "quantity": 210
+  },
+  {
+    "type": "P",
+    "id": "P-020",
+    "sku": "SKU-020",
+    "name": "Кабель ВВГнг 3x2.5",
+    "unit": "м",
+    "quantity": 600
   }
 ]
