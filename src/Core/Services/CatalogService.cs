@@ -157,4 +157,29 @@ public sealed class CatalogService
 
         return added;
     }
+
+    public async Task<int> ImportStreamAsync(
+        IAsyncEnumerable<Product> items,
+        CancellationToken ct = default,
+        IProgress<int>? progress = null)
+    {
+        int added = 0;
+
+        await foreach (var item in items.WithCancellation(ct))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (_store.GetById(item.Id) is not null)
+            continue;
+
+            _store.Add(item);
+            OnChanged(item, CatalogChangeKind.Added, item.Quantity);
+
+            added++;
+
+            progress?.Report(added);
+        }
+
+        return added;
+    }
 }

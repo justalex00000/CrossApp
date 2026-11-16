@@ -2,9 +2,22 @@ using Core.Domain;
 using Core.Events;
 using Core.Services;
 using Core.Storage;
+using Core.Abstractions;
 using Xunit;
 
 namespace Core.Tests;
+
+public sealed class DelayedImporter : ICatalogImporter
+{
+    public async Task<IReadOnlyList<Product>> LoadAsync(
+        string path,
+        CancellationToken ct = default)
+    {
+        await Task.Delay(Timeout.Infinite, ct);
+
+        return Array.Empty<Product>();
+    }
+}
 
 public class CatalogServiceTests
 {
@@ -35,5 +48,31 @@ public class CatalogServiceTests
 
         Assert.Single(events);
         Assert.Equal(CatalogChangeKind.Added, events[0].Kind);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WhenTimeoutExpires_CancelsOperation()
+    {
+        using var userCts = new CancellationTokenSource();
+
+        using var timeoutCts =
+            new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                userCts.Token,
+                timeoutCts.Token);
+
+        var service = new CatalogService(
+            new InMemoryCatalogStore());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.ImportAsync(
+                new DelayedImporter(),
+                "unused.json",
+                linkedCts.Token));
+
+        Assert.True(timeoutCts.IsCancellationRequested);
+        Assert.False(userCts.IsCancellationRequested);
     }
 }

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using Core.Abstractions;
@@ -6,11 +7,27 @@ using Core.Dto;
 
 namespace Core.Storage;
 
-public sealed class JsonCatalogImporter : ICatalogImporter
+public sealed class JsonCatalogImporter :
+    ICatalogImporter,
+    IStreamingCatalogImporter
 {
     public async Task<IReadOnlyList<Product>> LoadAsync(
         string path,
         CancellationToken ct = default)
+    {
+        var result = new List<Product>();
+
+        await foreach (var product in StreamAsync(path, ct))
+        {
+            result.Add(product);
+        }
+
+        return result;
+    }
+
+    public async IAsyncEnumerable<Product> StreamAsync(
+        string path,
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
         await using var stream = new FileStream(
             path,
@@ -20,46 +37,55 @@ public sealed class JsonCatalogImporter : ICatalogImporter
             4096,
             useAsync: true);
 
-        using var document = await JsonDocument.ParseAsync(
-            stream,
-            cancellationToken: ct);
-
-        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        var options = new JsonSerializerOptions
         {
-            throw new DomainException(
-                $"Файл {Path.GetFileName(path)} не містить списку.");
-        }
+            PropertyNameCaseInsensitive = true
+        };
 
-        var result = new List<Product>();
-        var index = 0;
+        int index = 0;
 
-        foreach (var element in document.RootElement.EnumerateArray())
+        await foreach (var element in
+            JsonSerializer.DeserializeAsyncEnumerable<JsonElement>(
+                stream,
+                cancellationToken: ct))
         {
             ct.ThrowIfCancellationRequested();
             index++;
 
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                throw new DomainException(
+                    $"Запис {index}: очікувався JSON-об'єкт.");
+            }
+
             if (!element.TryGetProperty("type", out var type))
+            {
                 throw new DomainException(
                     $"Запис {index}: відсутнє поле type.");
+            }
+
+            if (type.ValueKind != JsonValueKind.String)
+            {
+                throw new DomainException(
+                    $"Запис {index}: поле type повинно бути рядком.");
+            }
 
             if (type.GetString() != "P")
                 continue;
 
+            Product product;
+
             try
             {
-                var dto = element.Deserialize<ProductDto>(
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                var dto = element.Deserialize<ProductDto>(options);
 
-                result.Add(Product.FromDto(dto!));
-            }
-            catch (JsonException ex)
-            {
-                throw new DomainException(
-                    $"Запис {index}: некоректний формат товару.",
-                    ex);
+                if (dto is null)
+                {
+                    throw new DomainException(
+                        $"Запис {index}: порожній запис товару.");
+                }
+
+                product = Product.FromDto(dto);
             }
             catch (ArgumentException ex)
             {
@@ -67,8 +93,8 @@ public sealed class JsonCatalogImporter : ICatalogImporter
                     $"Запис {index}: {ex.Message}",
                     ex);
             }
-        }
 
-        return result;
+            yield return product;
+        }
     }
 }

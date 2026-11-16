@@ -28,7 +28,6 @@ switch (command)
     case "report-top":
     {
         var items = service.All();
-
         Console.WriteLine("=== Топ-5 товарів за кількістю ===");
         Print(ReportService.TopByQuantity(items, 5));
         break;
@@ -37,7 +36,6 @@ switch (command)
     case "report-low":
     {
         var items = service.All();
-
         Console.WriteLine("=== Товари із залишком менше 10 ===");
         Print(ReportService.LowStock(items, 10));
         break;
@@ -46,7 +44,6 @@ switch (command)
     case "report-groups":
     {
         var items = service.All();
-
         Console.WriteLine("=== Групування за одиницями виміру ===");
 
         foreach (var g in ReportService.ByUnit(items))
@@ -61,7 +58,6 @@ switch (command)
     case "report-sum":
     {
         var items = service.All();
-
         Console.WriteLine("=== Загальна статистика ===");
 
         var t = ReportService.Totals(items);
@@ -76,7 +72,6 @@ switch (command)
     case "report-groups-query":
     {
         var items = service.All();
-
         Console.WriteLine("=== Групування за одиницями виміру (query syntax) ===");
 
         foreach (var g in ReportService.ByUnitQuerySyntax(items))
@@ -91,7 +86,6 @@ switch (command)
     case "report-top-extension":
     {
         var items = service.All();
-
         Console.WriteLine("=== Топ-5 товарів через TopBy ===");
         Print(ReportService.TopByQuantityExtension(items, 5));
         break;
@@ -100,7 +94,6 @@ switch (command)
     case "report-low-extension":
     {
         var items = service.All();
-
         Console.WriteLine("=== Товари з найменшою кількістю через TopBy ===");
         Print(ReportService.LowestByQuantityExtension(items, 5));
         break;
@@ -109,7 +102,6 @@ switch (command)
     case "report-join":
     {
         var items = service.All();
-
         Console.WriteLine("=== Звіт із використанням Join ===");
 
         if (items.Count < 3)
@@ -118,12 +110,9 @@ switch (command)
             break;
         }
 
-        var movements = CreateMovements(items);
-
-        foreach (var line in ReportService.MovementJoin(items, movements))
+        foreach (var line in ReportService.MovementJoin(items, CreateMovements(items)))
         {
-            Console.WriteLine(
-                $" {line.Sku,-10} зміна: {line.Delta,6}");
+            Console.WriteLine($" {line.Sku,-10} зміна: {line.Delta,6}");
         }
 
         break;
@@ -132,7 +121,6 @@ switch (command)
     case "report-groupjoin":
     {
         var items = service.All();
-
         Console.WriteLine("=== Звіт із використанням GroupJoin ===");
 
         if (items.Count < 3)
@@ -141,9 +129,7 @@ switch (command)
             break;
         }
 
-        var movements = CreateMovements(items);
-
-        foreach (var line in ReportService.MovementGroupJoin(items, movements))
+        foreach (var line in ReportService.MovementGroupJoin(items, CreateMovements(items)))
         {
             Console.WriteLine(
                 $" {line.Sku,-10} кількість операцій: {line.Count,4}");
@@ -153,35 +139,25 @@ switch (command)
     }
 
     case "benchmark":
-    {
         Console.WriteLine("=== Порівняння LINQ-запитів ===");
         RunBenchmark();
         break;
-    }
 
     case "report-deferred":
     {
         Console.WriteLine("=== Демонстрація відкладеного виконання LINQ ===");
 
         var source = service.All().ToList();
-
         var query = source.Where(p => p.Quantity < 10);
 
-        Console.WriteLine(
-            $"Кількість товарів до додавання: {query.Count()}");
+        Console.WriteLine($"Кількість товарів до додавання: {query.Count()}");
 
         source.Add(Product.Create(
-            "tmp00001",
-            "SKU-999",
-            "Тестовий товар",
-            "шт",
-            3));
+            "tmp00001", "SKU-999", "Тестовий товар", "шт", 3));
 
-        Console.WriteLine(
-            $"Кількість товарів після додавання: {query.Count()}");
+        Console.WriteLine($"Кількість товарів після додавання: {query.Count()}");
 
         var snapshot = query.ToList();
-
         source.Clear();
 
         Console.WriteLine(
@@ -192,18 +168,32 @@ switch (command)
 
     case "import-async":
     {
-        Console.WriteLine("=== Асинхронний імпорт JSON ===");
+        Console.WriteLine("=== Асинхронний імпорт JSON із прогресом ===");
 
         var dataPath = Path.GetFullPath("data/sample.json");
 
-        using var cts = new CancellationTokenSource();
-
+        using var userCts = new CancellationTokenSource();
+        using var timeoutCts = new CancellationTokenSource();
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            userCts.Token,
+            timeoutCts.Token);
 
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
-            cts.Cancel();
+            userCts.Cancel();
         };
+
+        // Таймаут для демонстрації можна задати аргументом --timeout.
+        if (args.Contains("--timeout"))
+        {
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+        }
+
+        var progress = new Progress<int>(percent =>
+        {
+            Console.Write($"\rІмпорт: {percent}%   ");
+        });
 
         try
         {
@@ -212,13 +202,90 @@ switch (command)
             var added = await service.ImportAsync(
                 importer,
                 dataPath,
-                cts.Token);
+                linkedCts.Token,
+                progress);
 
+            Console.WriteLine();
             Console.WriteLine($"Імпортовано записів: {added}");
         }
         catch (OperationCanceledException)
         {
-            Console.WriteLine("Імпорт скасовано.");
+            Console.WriteLine();
+
+            if (timeoutCts.IsCancellationRequested &&
+                !userCts.IsCancellationRequested)
+            {
+                Console.WriteLine("Час очікування імпорту вичерпано.");
+            }
+            else
+            {
+                Console.WriteLine("Імпорт скасовано.");
+            }
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"Дані відхилено: {ex.Message}");
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine($"Файл не знайдено: {dataPath}");
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Помилка формату JSON: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"Помилка читання файлу: {ex.Message}");
+        }
+
+        break;
+    }
+
+    case "import-stream":
+    {
+        Console.WriteLine("=== Потоковий імпорт JSON ===");
+
+        var dataPath = Path.GetFullPath("data/sample.json");
+
+        using var userCts = new CancellationTokenSource();
+        using var timeoutCts = new CancellationTokenSource();
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            userCts.Token,
+            timeoutCts.Token);
+
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            userCts.Cancel();
+        };
+
+        if (args.Contains("--timeout"))
+        {
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+        }
+
+        try
+        {
+            IStreamingCatalogImporter importer = new JsonCatalogImporter();
+
+            var added = await service.ImportStreamAsync(
+                importer.StreamAsync(dataPath, linkedCts.Token),
+                linkedCts.Token);
+
+            Console.WriteLine($"Потоково імпортовано записів: {added}");
+        }
+        catch (OperationCanceledException)
+        {
+            if (timeoutCts.IsCancellationRequested &&
+                !userCts.IsCancellationRequested)
+            {
+                Console.WriteLine("Час очікування потокового імпорту вичерпано.");
+            }
+            else
+            {
+                Console.WriteLine("Потоковий імпорт скасовано.");
+            }
         }
         catch (DomainException ex)
         {
@@ -248,7 +315,8 @@ switch (command)
             "report-groups-query | report-top-extension | report-low-extension");
         Console.WriteLine(
             "report-join | report-groupjoin | benchmark | report-deferred");
-        Console.WriteLine("import-async");
+        Console.WriteLine("import-async [--timeout]");
+        Console.WriteLine("import-stream [--timeout]");
         break;
 }
 
