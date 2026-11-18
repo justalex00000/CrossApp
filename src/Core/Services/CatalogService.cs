@@ -131,31 +131,37 @@ public sealed class CatalogService
         var items = await importer.LoadAsync(path, ct);
 
         int added = 0;
+        int processed = 0;
+
+        if (items.Count == 0)
+        {
+            progress?.Report(100);
+        }
 
         foreach (var item in items)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (_store.GetById(item.Id) is not null)
-                continue;
+            processed++;
 
-            _store.Add(item);
+            if (_store.GetById(item.Id) is null)
+            {
+                _store.Add(item);
 
-            OnChanged(item, CatalogChangeKind.Added, item.Quantity);
+                OnChanged(
+                    item,
+                    CatalogChangeKind.Added,
+                    item.Quantity,
+                    null);
 
             added++;
+            }
 
-            int percent = items.Count == 0
-                ? 100
-                : added * 100 / items.Count;
-
+            int percent = processed * 100 / items.Count;
             progress?.Report(percent);
         }
 
-        if (items.Count == 0)
-            progress?.Report(100);
-
-        return added;
+        return added;   
     }
 
     public async Task<int> ImportStreamAsync(

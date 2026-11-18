@@ -184,13 +184,14 @@ switch (command)
             userCts.Cancel();
         };
 
-        // Таймаут для демонстрації можна задати аргументом --timeout.
+        
+
         if (args.Contains("--timeout"))
         {
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(10));
         }
 
-        var progress = new Progress<int>(percent =>
+        IProgress<int> progress = new SynchronousProgress<int>(percent =>
         {
             Console.Write($"\rІмпорт: {percent}%   ");
         });
@@ -380,4 +381,19 @@ static void RunBenchmark()
 
     Console.WriteLine(
         $"Результати однакові: {resultWithList.SequenceEqual(resultWithoutList)}");
+}
+
+public sealed class SynchronousProgress<T> : IProgress<T>
+{
+    private readonly Action<T> _handler;
+
+    public SynchronousProgress(Action<T> handler)
+    {
+        _handler = handler;
+    }
+
+    public void Report(T value)
+    {
+        _handler(value);
+    }
 }
